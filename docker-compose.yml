@@ -1,0 +1,32 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: canteenq-backend
+    restart: always
+    env_file:
+      - ./backend/.env
+    environment:
+      PORT: 4000
+    ports:
+      - '4000:4000'
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4000
+        NEXT_PUBLIC_GRAPHQL_URL: http://localhost:4000/graphql
+        NEXT_PUBLIC_WS_URL: http://localhost:4000
+    container_name: canteenq-frontend
+    restart: always
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+      NEXT_PUBLIC_GRAPHQL_URL: http://localhost:4000/graphql
+      NEXT_PUBLIC_WS_URL: http://localhost:4000
+    ports:
+      - '3000:3000'
+    depends_on:
+      - backend

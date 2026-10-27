@@ -1,0 +1,215 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  STUDENT
+  STAFF
+  ADMIN
+  COLLEGE_ADMIN
+}
+
+enum OrderStatus {
+  PLACED
+  PAYMENT_PENDING
+  PAID
+  ACCEPTED
+  PREPARING
+  READY
+  COMPLETED
+  CANCELLED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  phone        String?
+  passwordHash String
+  role         Role          @default(STUDENT)
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  student      Student?
+  staff        Staff?
+  notifications Notification[]
+}
+
+model Student {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  studentId  String   @unique
+  department String
+  semester   Int
+  className  String
+
+  cart       Cart?
+  orders     Order[]
+}
+
+model Staff {
+  id          String @id @default(cuid())
+  userId      String @unique
+  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeId  String @unique
+  designation String
+  shift       String
+}
+
+model Canteen {
+  id          String @id @default(cuid())
+  name        String
+  location    String
+  openingTime String @default("08:00")
+  closingTime String @default("18:00")
+  maxCapacity Int    @default(50)
+  status      String @default("OPEN")
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  description String?
+  foodItems   FoodItem[]
+}
+
+model FoodItem {
+  id              String      @id @default(cuid())
+  name            String
+  description     String
+  price           Float
+  image           String?
+  categoryId      String
+  category        Category    @relation(fields: [categoryId], references: [id])
+  preparationTime Int         @default(10)
+  stockQuantity   Int         @default(50)
+  isAvailable     Boolean     @default(true)
+  isVeg           Boolean     @default(true)
+  rating          Float       @default(4.5)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+}
+
+model Cart {
+  id          String     @id @default(cuid())
+  studentId   String     @unique
+  student     Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  totalAmount Float      @default(0)
+  updatedAt   DateTime   @updatedAt
+
+  items       CartItem[]
+}
+
+model CartItem {
+  id         String   @id @default(cuid())
+  cartId     String
+  cart       Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  foodItemId String
+  foodItem   FoodItem @relation(fields: [foodItemId], references: [id])
+  quantity   Int      @default(1)
+  unitPrice  Float
+  subtotal   Float
+
+  @@unique([cartId, foodItemId])
+}
+
+model Order {
+  id                       String        @id @default(cuid())
+  orderNumber              String        @unique
+  studentId                String
+  student                  Student       @relation(fields: [studentId], references: [id])
+  tokenNumber              String?
+  status                   OrderStatus   @default(PLACED)
+  paymentStatus            PaymentStatus @default(PENDING)
+  paymentMethod            String        @default("UPI")
+  subtotal                 Float
+  tax                      Float
+  totalAmount              Float
+  queuePosition            Int?
+  estimatedWaitingTime     Int?
+  estimatedPreparationTime Int?
+  qrVerificationCode       String?
+  createdAt                DateTime      @default(now())
+  acceptedAt               DateTime?
+  preparingAt              DateTime?
+  readyAt                  DateTime?
+  completedAt              DateTime?
+  cancelledAt              DateTime?
+
+  items                    OrderItem[]
+  token                    QueueToken?
+  payment                  Payment?
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  foodItemId String
+  foodItem   FoodItem @relation(fields: [foodItemId], references: [id])
+  quantity   Int
+  unitPrice  Float
+  subtotal   Float
+}
+
+model QueueToken {
+  id                String    @id @default(cuid())
+  tokenNumber       String    @unique
+  orderId           String    @unique
+  order             Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  position          Int
+  status            String    @default("ACTIVE")
+  estimatedWaitTime Int
+  issuedAt          DateTime  @default(now())
+  completedAt       DateTime?
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  orderId       String        @unique
+  order         Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  transactionId String
+  provider      String        @default("TEST_MODE")
+  amount        Float
+  currency      String        @default("INR")
+  status        PaymentStatus @default(PENDING)
+  paidAt        DateTime?
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("ORDER_UPDATE")
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model QueueSnapshot {
+  id                 String   @id @default(cuid())
+  timestamp          DateTime @default(now())
+  queueLength        Int
+  activeOrders       Int
+  averageWaitingTime Float
+  crowdPercentage    Float
+}
