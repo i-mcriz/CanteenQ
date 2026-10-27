@@ -20,20 +20,7 @@ import {
 import CrowdMeter from '@/components/CrowdMeter';
 import { useCart } from '@/context/CartContext';
 import { fetchGraphQL } from '@/lib/graphql';
-import { FALLBACK_FOODS } from '@/lib/mockMenu';
-
-interface FoodItem {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image: string;
-  category: { name: string };
-  preparationTime: number;
-  isAvailable: boolean;
-  isVeg: boolean;
-  rating: number;
-}
+import { FALLBACK_FOODS, FoodItem } from '@/lib/mockMenu';
 
 export default function HomePage() {
   const { addItem } = useCart();
